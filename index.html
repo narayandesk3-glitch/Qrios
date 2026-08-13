@@ -271,7 +271,13 @@ async function startOrJoin(pin){
   });
   S.busy=false;
   const r = Array.isArray(data)?data[0]:data;
-  if(error||!r){ S.err='Could not reach the kitchen system. Check your connection.'; render(); return; }
+  if(error){
+    console.error('join_table failed:', error);
+    const msg = error.message || 'Unknown error';
+    S.err = msg; S.joinMsg = msg;
+    render(); return;
+  }
+  if(!r){ S.err='No response from the server — please try again.'; S.joinMsg=S.err; render(); return; }
   if(r.error){
     const wrongPin = /pin/i.test(r.error);
     if(pin && wrongPin){
