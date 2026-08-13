@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0C271E" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="QRIOS" />
+<title>QRIOS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+:root{
+  --emerald:#12362A; --emerald-deep:#0C271E; --emerald-soft:#1C4536;
+  --brass:#C9A550; --brass-soft:#E4CE96;
+  --cream:#FAF5EA; --card:#FFFDF8; --ink:#1A1F1B; --muted:#7C837C; --mutedD:#A9B4A9;
+  --line:#E8E0CE; --lineD:rgba(250,245,234,.12);
+  --red:#B5482F; --redS:#F6E2DC; --green:#2E7D53; --greenS:#E2F0E7;
+  --amberS:#F7EDD3; --amberI:#8A6D1F;
+  --fd:'Fraunces',serif; --fb:'Inter',sans-serif; --fm:'IBM Plex Mono',monospace;
+  --sh:0 18px 44px rgba(12,39,30,.16);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+button{font:inherit;cursor:pointer;border:0;background:none}
+input,textarea,select{font:inherit;outline:none}
+body{font-family:var(--fb);background:var(--emerald-deep);color:var(--cream);min-height:100dvh}
+.sn::-webkit-scrollbar{display:none} .sn{scrollbar-width:none}
+
+/* shell */
+.wrap{max-width:520px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;background:var(--cream);color:var(--ink);position:relative}
+.wrap.dark{background:var(--emerald-deep);color:var(--cream)}
+.hd{background:var(--emerald);color:var(--cream);padding:16px 18px;position:sticky;top:0;z-index:20}
+.hd-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hd h1{font-family:var(--fd);font-size:18px;font-weight:600}
+.hd .sub{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-soft);margin-top:3px}
+.chip{background:rgba(250,245,234,.08);border:1px solid rgba(201,165,80,.4);border-radius:12px;padding:6px 11px;text-align:center}
+.chip b{display:block;font-family:var(--fm);font-size:14px;color:var(--brass-soft)}
+.chip span{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--mutedD)}
+.body{flex:1;overflow-y:auto;padding:16px}
+.tabs{display:flex;gap:2px;margin-top:14px}
+.tab{flex:1;padding:9px 2px;text-align:center;font-size:11px;font-weight:600;color:var(--mutedD);border-bottom:2.5px solid transparent;position:relative}
+.tab.on{color:var(--cream);border-color:var(--brass)}
+.tab .b{position:absolute;top:-2px;right:12%;min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--brass);color:var(--emerald-deep);font-size:9px;font-weight:800;display:grid;place-items:center;font-family:var(--fm)}
+
+/* bits */
+.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:10px}
+.cta{width:100%;padding:14px;border-radius:13px;font-size:14px;font-weight:700;background:var(--emerald);color:var(--cream);margin-top:14px}
+.cta.brass{background:var(--brass);color:var(--emerald-deep)}
+.cta:disabled{background:#D8D2C2;color:var(--muted)}
+.inp{width:100%;padding:12px 13px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);font-size:15px;color:var(--ink)}
+.inp:focus{border-color:var(--brass)}
+.lab{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:14px 0 7px}
+.grp{display:flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.grp span{padding:12px;background:#F1EBDD;color:var(--muted);font-family:var(--fm);font-size:13px}
+.grp input{flex:1;border:0;background:transparent;padding:12px;font-size:15px;font-family:var(--fm);color:var(--ink)}
+.err{display:flex;gap:8px;align-items:center;background:var(--redS);color:var(--red);border-radius:11px;padding:10px 12px;font-size:12.5px;margin-top:12px}
+.ok-box{display:flex;gap:8px;align-items:center;background:var(--greenS);color:var(--green);border-radius:11px;padding:10px 12px;font-size:12.5px;margin-top:12px}
+.pins{display:flex;gap:10px;justify-content:center;margin-top:16px}
+.pins input{width:54px;height:62px;text-align:center;font-family:var(--fm);font-size:23px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink)}
+@keyframes shk{0%,100%{transform:none}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.shk{animation:shk .35s}
+.st{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:4px 9px;border-radius:7px}
+.s-placed{background:var(--amberS);color:var(--amberI)} .s-accepted{background:#E4EDF6;color:#33608C}
+.s-preparing{background:var(--amberS);color:var(--amberI)} .s-ready{background:var(--greenS);color:var(--green)}
+.s-served{background:#EEE9DC;color:var(--muted)} .s-rejected{background:var(--redS);color:var(--red)}
+.row{display:flex;align-items:center;gap:11px}
+.mono{font-family:var(--fm)}
+.mut{color:var(--muted);font-size:12px}
+.h4{font-family:var(--fd);font-size:15px;color:var(--emerald);margin-bottom:9px}
+.avs{display:flex;margin-top:12px}
+.av{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--emerald-deep);border:2px solid var(--emerald);margin-right:-7px}
+.add{background:var(--emerald);color:var(--cream);font-size:11.5px;font-weight:700;padding:8px 13px;border-radius:10px}
+.stp{display:flex;align-items:center;gap:9px;background:var(--emerald);border-radius:10px;padding:6px 9px}
+.stp button{color:var(--cream);font-size:16px;line-height:1;width:16px}
+.stp span{font-family:var(--fm);font-size:13px;color:var(--brass-soft);min-width:11px;text-align:center}
+.veg{width:14px;height:14px;border:1.5px solid var(--green);border-radius:3px;display:grid;place-items:center;flex-shrink:0;margin-top:3px}
+.veg::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--green)}
+.bar{margin:0 16px 16px;background:var(--brass);color:var(--emerald-deep);border-radius:14px;padding:13px 16px;display:flex;justify-content:space-between;font-weight:700;font-size:13.5px}
+.trk{display:flex;margin-top:12px}
+.tstep{flex:1;text-align:center;position:relative}
+.tstep .d{width:10px;height:10px;border-radius:50%;background:var(--line);margin:0 auto 5px;position:relative;z-index:1}
+.tstep.dn .d{background:var(--brass)} .tstep.now .d{background:var(--emerald);box-shadow:0 0 0 4px rgba(18,54,42,.14)}
+.tstep .l{font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.tstep.dn .l,.tstep.now .l{color:var(--emerald);font-weight:700}
+.tstep::before{content:"";position:absolute;top:4px;left:-50%;width:100%;height:1.5px;background:var(--line)}
+.tstep:first-child::before{display:none}
+.tstep.dn::before,.tstep.now::before{background:var(--brass)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.hb{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11.5px;font-weight:600;color:var(--ink)}
+.hb.on{border-color:var(--brass);background:var(--amberS)}
+.tk{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px}
+.tk.late{border-color:var(--red);box-shadow:0 0 0 3px rgba(181,72,47,.07)}
+.tbtn{flex:1;padding:10px;border-radius:10px;font-size:11.5px;font-weight:700}
+.t-ok{background:var(--emerald);color:var(--cream)} .t-no{background:var(--redS);color:var(--red)}
+.t-nx{background:var(--brass);color:var(--emerald-deep)}
+.empty{text-align:center;padding:34px 14px;color:var(--muted);font-size:12.5px}
+.empty b{display:block;font-family:var(--fd);font-size:15px;color:var(--ink);margin-bottom:5px}
+.sw{width:42px;height:24px;border-radius:99px;background:#D8D2C2;position:relative;flex-shrink:0}
+.sw::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;top:3px;left:3px;background:#fff;transition:.15s}
+.sw.on{background:var(--green)} .sw.on::after{left:21px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--emerald);color:var(--cream);padding:12px 20px;border-radius:13px;font-size:13px;font-weight:600;box-shadow:var(--sh);transition:.28s;z-index:200;border:1px solid rgba(201,165,80,.4);max-width:90vw}
+#toast.on{transform:translateX(-50%) translateY(0)}
+.conn{position:fixed;top:8px;right:8px;z-index:210;font-size:9.5px;font-family:var(--fm);padding:4px 9px;border-radius:8px;letter-spacing:.08em}
+.conn.live{background:rgba(46,125,83,.9);color:#fff}
+.conn.off{background:rgba(181,72,47,.95);color:#fff}
+.hero{padding:34px 22px;text-align:center}
+.hero .mk{width:72px;height:72px;border-radius:20px;margin:0 auto 18px;background:linear-gradient(150deg,#153A2D,#0C271E);display:grid;place-items:center;box-shadow:0 10px 30px rgba(201,165,80,.24),inset 0 0 0 2px rgba(201,165,80,.5)}
+.hero h1{font-family:var(--fd);font-size:34px;letter-spacing:.16em}
+.hero h1 i{font-style:normal;color:var(--brass)}
+.hero p{font-size:13px;color:var(--mutedD);margin-top:10px;line-height:1.6}
+.ent{background:rgba(250,245,234,.05);border:1px solid var(--lineD);border-radius:16px;padding:18px;margin-top:11px;display:flex;align-items:center;gap:13px;text-align:left;width:100%;color:var(--cream)}
+.ent b{font-size:14px;font-family:var(--fd);font-weight:600;display:block}
+.ent span{font-size:11.5px;color:var(--mutedD);display:block;margin-top:2px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<div id="conn" class="conn off">connecting…</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+/* ══════════════════════════════════════════════════════════════
+   ⚠️  PASTE YOUR SUPABASE KEYS HERE  (Project Settings → API)
+   The anon key is meant to be public — it's safe in client code.
+   ══════════════════════════════════════════════════════════════ */
+const SUPABASE_URL = localStorage.getItem('qrios_url') || "";
+const SUPABASE_ANON = localStorage.getItem('qrios_key') || "";
+
+const sb = (SUPABASE_URL && SUPABASE_ANON) ? createClient(SUPABASE_URL, SUPABASE_ANON) : null;
+
+/* ───────── helpers ───────── */
+const $ = id => document.getElementById(id);
+const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const qs = new URLSearchParams(location.search);
+let toastT;
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2400); }
+function setConn(live){ const c=$('conn'); c.className='conn '+(live?'live':'off'); c.textContent = live?'● live':'○ offline'; }
+const mins = ts => Math.floor((Date.now()-new Date(ts))/60000);
+const ago  = ts => { const m=mins(ts); return m<1?'just now':m+'m ago'; };
+const LOGO = (s,c)=>`<svg viewBox="0 0 64 64" fill="none" style="width:${s}px;height:${s}px"><g stroke="${c}" stroke-width="${s<24?4.5:3.2}" stroke-linejoin="round" stroke-linecap="round"><path d="M10 4H21L27 10V21L21 27H10L4 21V10Z"/><path d="M37 4H48L54 10V21L48 27H37L31 21V10Z"/><path d="M10 31H21L27 37V48L21 54H10L4 48V37Z"/><path d="M37 31H48L54 37V48L61 62L44 54H37L31 48V37Z"/></g></svg>`;
+
+const FLOW = ['placed','accepted','preparing','ready','served'];
+const FLOW_L = {placed:'Placed',accepted:'Accepted',preparing:'Cooking',ready:'Ready',served:'Served',rejected:'Declined'};
+const REQS = [['water','Water','🥛'],['cutlery','Cutlery','🍴'],['cleaning','Clean table','🧹'],['other','Call captain','🛎']];
+
+/* ───────── state (mirrors the DB; refreshed by realtime) ───────── */
+const S = {
+  view:'boot', role:null, err:'',
+  rest:null, tableLabel:'', qrToken: qs.get('t')||'',
+  sessionId:localStorage.getItem('qrios_sess')||null,
+  memberId:localStorage.getItem('qrios_mem')||null,
+  myName:localStorage.getItem('qrios_name')||'',
+  isHost:localStorage.getItem('qrios_host')==='1',
+  pin:'', members:[], menu:[], orders:[], items:[], requests:[],
+  cart:{}, tab:'menu',
+  regName:'', regPhone:'', agree:false,
+  joinName:'', pinIn:['','','',''], pinErr:false, attempts:0, showHelp:false,
+  staff:null, tickets:[], allReq:[], sessions:[],
+  code:'', codeErr:'',
+  splitMode:'together', payMethod:null,
+  busy:false,
+};
+
+/* ───────── data loading ───────── */
+async function loadRestaurant(){
+  const { data } = await sb.from('restaurants').select('*').limit(1).single();
+  S.rest = data;
+}
+async function loadMenu(){
+  const { data } = await sb.from('menu_items').select('*')
+    .eq('restaurant_id', S.rest.id).order('sort_order');
+  S.menu = data||[];
+}
+async function loadSession(){
+  if(!S.sessionId) return;
+  const { data: sess } = await sb.from('sessions').select('*, tables(label)').eq('id',S.sessionId).maybeSingle();
+  if(!sess || sess.status==='closed'){ clearSession(); return; }
+  S.pin = sess.pin; S.tableLabel = sess.tables?.label||'';
+  const { data: mem } = await sb.from('session_members').select('*').eq('session_id',S.sessionId).order('joined_at');
+  S.members = mem||[];
+  const { data: ords } = await sb.from('orders').select('*').eq('session_id',S.sessionId).order('placed_at',{ascending:false});
+  S.orders = ords||[];
+  const ids = S.orders.map(o=>o.id);
+  S.items = ids.length ? (await sb.from('order_items').select('*').in('order_id',ids)).data||[] : [];
+  const { data: rq } = await sb.from('requests').select('*').eq('session_id',S.sessionId).order('created_at',{ascending:false});
+  S.requests = rq||[];
+}
+async function loadStaffData(){
+  const { data: ords } = await sb.from('orders').select('*, sessions(id, tables(label))')
+    .eq('restaurant_id',S.rest.id).in('status',['placed','accepted','preparing','ready'])
+    .order('placed_at');
+  S.tickets = ords||[];
+  const ids = S.tickets.map(o=>o.id);
+  S.items = ids.length ? (await sb.from('order_items').select('*').in('order_id',ids)).data||[] : [];
+  const { data: rq } = await sb.from('requests').select('*, sessions(tables(label))')
+    .eq('restaurant_id',S.rest.id).eq('status','open').order('created_at');
+  S.allReq = rq||[];
+  const { data: ss } = await sb.from('sessions').select('*, tables(label), session_members(name,is_host)')
+    .eq('restaurant_id',S.rest.id).neq('status','closed');
+  S.sessions = ss||[];
+}
+function clearSession(){
+  ['qrios_sess','qrios_mem','qrios_name','qrios_host'].forEach(k=>localStorage.removeItem(k));
+  S.sessionId=null; S.memberId=null; S.isHost=false; S.members=[]; S.orders=[]; S.items=[]; S.requests=[]; S.cart={};
+}
+
+/* ───────── realtime ───────── */
+let chan;
+async function subscribe(){
+  if(chan) await sb.removeChannel(chan);
+  chan = sb.channel('qrios-'+(S.sessionId||S.role||'x'))
+    .on('postgres_changes',{event:'*',schema:'public',table:'orders'},      onChange)
+    .on('postgres_changes',{event:'*',schema:'public',table:'order_items'}, onChange)
+    .on('postgres_changes',{event:'*',schema:'public',table:'requests'},    onChange)
+    .on('postgres_changes',{event:'*',schema:'public',table:'sessions'},    onChange)
+    .on('postgres_changes',{event:'*',schema:'public',table:'session_members'},onChange)
+    .on('postgres_changes',{event:'*',schema:'public',table:'menu_items'},  onChange)
+    .subscribe(st=> setConn(st==='SUBSCRIBED'));
+}
+let pending=false;
+async function onChange(payload){
+  if(pending) return; pending=true;
+  setTimeout(async ()=>{
+    pending=false;
+    const prev = JSON.stringify(S.orders.map(o=>[o.id,o.status]));
+    if(S.role) await loadStaffData(); else await loadSession();
+    await loadMenu();
+    if(!S.role){
+      const now = JSON.stringify(S.orders.map(o=>[o.id,o.status]));
+      if(now!==prev && S.orders[0]) notifyStatus();
+    }
+    render();
+  }, 180);
+}
+function notifyStatus(){
+  const o=S.orders[0];
+  const m={accepted:'Kitchen accepted your order',preparing:'Your food is on the stove',ready:'Ready — coming to your table',served:'Served. Enjoy! 🍽',rejected:'An item was declined — see Orders'};
+  if(m[o.status]) toast(m[o.status]);
+}
+
+/* ───────── actions ───────── */
+async function startOrJoin(pin){
+  S.busy=true; render();
+  const { data, error } = await sb.rpc('join_table',{
+    p_qr_token:S.qrToken, p_name:(pin?S.joinName:S.regName).trim(),
+    p_phone:S.regPhone||'', p_pin:pin||null
+  });
+  S.busy=false;
+  const r = Array.isArray(data)?data[0]:data;
+  if(error||!r){ S.err='Could not reach the kitchen system. Check your connection.'; render(); return; }
+  if(r.error){
+    if(pin){ S.pinErr=true; S.pinIn=['','','','']; S.attempts++; if(S.attempts>=2) S.showHelp=true; }
+    else S.err=r.error;
+    render(); return;
+  }
+  S.sessionId=r.session_id; S.memberId=r.member_id; S.isHost=r.is_host;
+  S.myName=(pin?S.joinName:S.regName).trim(); S.pin=r.pin; S.tableLabel=r.table_label;
+  localStorage.setItem('qrios_sess',S.sessionId); localStorage.setItem('qrios_mem',S.memberId);
+  localStorage.setItem('qrios_name',S.myName); localStorage.setItem('qrios_host',r.is_host?'1':'0');
+  S.view='guest'; S.tab='menu'; S.pinErr=false; S.attempts=0;
+  await loadSession(); await subscribe(); render();
+  toast(r.is_host?`Table started — PIN ${r.pin}`:'You\'re in!');
+}
+async function placeOrder(){
+  const items = Object.entries(S.cart).map(([id,q])=>({menu_item_id:id,qty:q,added_by:S.myName}));
+  if(!items.length) return;
+  S.busy=true; render();
+  const { error } = await sb.rpc('place_order',{p_session_id:S.sessionId,p_items:items});
+  S.busy=false;
+  if(error){ toast(error.message); render(); return; }
+  S.cart={}; S.tab='orders';
+  await loadSession(); render(); toast('Sent to the kitchen');
+}
+async function advance(id,to,reason){
+  await sb.rpc('advance_order',{p_order_id:id,p_to:to,p_reason:reason||null});
+  await loadStaffData(); render();
+}
+async function sendReq(type,label){
+  if(S.requests.some(r=>r.type===type&&r.status==='open')){ toast('Already on the way'); return; }
+  await sb.from('requests').insert({
+    restaurant_id:S.rest.id, session_id:S.sessionId, table_label:S.tableLabel,
+    type, label
+  });
+  await loadSession(); render(); toast(label+' requested');
+}
+async function resolveReq(id){
+  await sb.from('requests').update({status:'done',resolved_at:new Date().toISOString()}).eq('id',id);
+  await loadStaffData(); render(); toast('Done');
+}
+async function settle(method){
+  S.busy=true; render();
+  await sb.rpc('settle_session',{p_session_id:S.sessionId,p_method:method,p_split:S.splitMode});
+  S.busy=false;
+  await loadSession(); render();
+  toast(method==='upi'?'Payment received':'Counter notified');
+}
+async function confirmCash(sessionId){
+  await sb.rpc('confirm_counter_payment',{p_session_id:sessionId});
+  await loadStaffData(); render(); toast('Payment confirmed');
+}
+async function toggleAvail(id,cur){
+  await sb.from('menu_items').update({is_available:!cur}).eq('id',id);
+  await loadMenu(); render();
+}
+async function staffLogin(){
+  const { data } = await sb.rpc('staff_login',{p_code:S.code.trim()});
+  const m = Array.isArray(data)?data[0]:data;
+  if(!m){ S.codeErr='That code isn\'t recognised.'; render(); return; }
+  S.staff=m; S.role=m.role; localStorage.setItem('qrios_staff',JSON.stringify(m));
+  S.view='staff';
+  await loadStaffData(); await subscribe(); render();
+  toast('Welcome, '+m.name.split(' ')[0]);
+}
+function staffOut(){ localStorage.removeItem('qrios_staff'); S.staff=null; S.role=null; S.view='landing'; render(); }
+function leaveTable(){ clearSession(); S.view='landing'; render(); }
+
+/* ───────── bill maths ───────── */
+function bill(){
+  const live = S.orders.filter(o=>o.status!=='rejected').map(o=>o.id);
+  const sub = S.items.filter(i=>live.includes(i.order_id)).reduce((s,i)=>s+i.price_snapshot*i.qty,0);
+  const gst = Math.round(sub*(S.rest?.gst_percent||5)/100);
+  return {sub,gst,total:sub+gst};
+}
+
+/* ───────── views ───────── */
+function vSetup(){
+  return `<div class="wrap dark"><div class="hero">
+    <div class="mk">${LOGO(42,'#C9A550')}</div>
+    <h1>QR<i>IOS</i></h1>
+    <p>One-time setup — paste your Supabase keys.<br>Find them in Project Settings → API.</p>
+    <div style="text-align:left;margin-top:24px">
+      <div class="lab" style="color:var(--mutedD)">Project URL</div>
+      <input id="cfgU" class="inp" placeholder="https://xxxx.supabase.co" value="${esc(SUPABASE_URL)}" />
+      <div class="lab" style="color:var(--mutedD)">Anon public key</div>
+      <input id="cfgK" class="inp" placeholder="eyJhbGciOi..." value="${esc(SUPABASE_ANON)}" />
+      <button class="cta brass" onclick="QR.saveCfg()">Connect</button>
+      <p style="font-size:11px;color:var(--mutedD);margin-top:14px;line-height:1.6">
+        Stored in this browser only. The anon key is designed to be public — Row Level Security protects your data.
+      </p>
+    </div>
+  </div></div>`;
+}
+function vLanding(){
+  return `<div class="wrap dark"><div class="hero">
+    <div class="mk">${LOGO(42,'#C9A550')}</div>
+    <h1>QR<i>IOS</i></h1>
+    <p>${S.rest?esc(S.rest.name):'Table ordering'}</p>
+    <button class="ent" onclick="QR.go('code')">🔑<div><b>Staff sign in</b><span>Kitchen, waiters & owner</span></div></button>
+    <div style="margin-top:22px;font-size:11.5px;color:var(--mutedD);line-height:1.7">
+      Guests don't come here — they scan the QR on their table,<br>which opens this site with <span class="mono">?t=…</span>
+    </div>
+  </div></div>`;
+}
+function vRegister(){
+  const ok = S.regName.trim() && S.regPhone.length===10 && S.agree;
+  return `<div class="wrap"><div class="hd">
+      <div class="hd-row"><div><h1>Start Table ${esc(S.tableLabel||'')}</h1><div class="sub">${esc(S.rest?.name||'')}</div></div>
+      <div class="chip"><b>${esc(S.tableLabel||'—')}</b><span>Scanned</span></div></div></div>
+    <div class="body sn">
+      <p class="mut">You're first at this table — you'll get a PIN to share with anyone joining you.</p>
+      <div class="lab">Your name</div>
+      <input id="rn" class="inp" placeholder="e.g. Meera" value="${esc(S.regName)}" oninput="QR.f('regName',this.value)" />
+      <div class="lab">Mobile number</div>
+      <div class="grp"><span>+91</span><input id="rp" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit" value="${esc(S.regPhone)}" oninput="QR.phone(this)" /></div>
+      <button onclick="QR.tog('agree')" style="display:flex;gap:11px;align-items:flex-start;text-align:left;margin-top:16px">
+        <span style="width:19px;height:19px;border-radius:5px;flex-shrink:0;margin-top:1px;display:grid;place-items:center;border:1.5px solid var(--brass);background:${S.agree?'var(--brass)':'transparent'}">${S.agree?'✓':''}</span>
+        <span style="font-size:11.5px;color:var(--muted);line-height:1.5">I agree to the service charge and GST at this outlet.</span></button>
+      ${S.err?`<div class="err">${esc(S.err)}</div>`:''}
+      <button class="cta ${ok?'brass':''}" ${ok&&!S.busy?'':'disabled'} onclick="QR.start()">${S.busy?'Starting…':(ok?'Start table':'Fill everything above')}</button>
+    </div></div>`;
+}
+function vJoin(){
+  const host = S.hostName||'the person who started it';
+  const filled = S.pinIn.join('').length===4;
+  const ok = filled && S.joinName.trim();
+  return `<div class="wrap"><div class="hd">
+      <div class="hd-row"><div><h1>Join Table ${esc(S.tableLabel||'')}</h1><div class="sub">${esc(S.rest?.name||'')}</div></div>
+      <div class="chip"><b>${esc(S.tableLabel||'—')}</b><span>Scanned</span></div></div></div>
+    <div class="body sn">
+      <p style="text-align:center;font-family:var(--fd);font-size:16px;color:var(--emerald)">Someone's already at this table</p>
+      <p class="mut" style="text-align:center;margin-top:5px">Enter the 4-digit PIN showing on their phone</p>
+      <div class="pins ${S.pinErr?'shk':''}">
+        ${S.pinIn.map((v,i)=>`<input id="p${i}" type="tel" inputmode="numeric" maxlength="1" value="${esc(v)}" oninput="QR.pin(${i},this)" style="border-color:${S.pinErr?'var(--red)':(v?'var(--brass)':'var(--line)')}" />`).join('')}
+      </div>
+      ${S.pinErr?`<div class="err" style="justify-content:center">That PIN didn't match — try again</div>`:''}
+      <div class="lab">Your name <span style="text-transform:none;letter-spacing:0">— so the table knows who ordered what</span></div>
+      <input id="jn" class="inp" placeholder="e.g. Arjun" value="${esc(S.joinName)}" oninput="QR.f('joinName',this.value)" />
+      <button class="cta ${ok?'brass':''}" ${ok&&!S.busy?'':'disabled'} onclick="QR.join()">${S.busy?'Joining…':(ok?'Join table':(filled?'Add your name':'Enter the PIN'))}</button>
+      <button onclick="QR.tog('showHelp')" style="width:100%;text-align:center;margin-top:13px;font-size:12px;color:var(--emerald);text-decoration:underline">Don't have the PIN?</button>
+      ${S.showHelp?`<div class="card" style="margin-top:10px">
+        <div style="font-size:12.5px;line-height:1.7">📱 It's the <b>PIN chip at the top</b> of their screen, next to the table number.<br>👥 Anyone already seated has the same PIN.</div>
+        <button class="cta" onclick="QR.helpReq()">🛎 Ask a staff member for help</button></div>`:''}
+    </div></div>`;
+}
+function vGuest(){
+  const {sub,gst,total}=bill();
+  const openO = S.orders.filter(o=>!['served','rejected'].includes(o.status)).length;
+  const openR = S.requests.filter(r=>r.status==='open'&&r.type!=='payment').length;
+  const cartN = Object.values(S.cart).reduce((a,b)=>a+b,0);
+  const cartT = Object.entries(S.cart).reduce((s,[id,q])=>{const m=S.menu.find(x=>x.id===id);return s+(m?m.price*q:0)},0);
+  const settled = S.sessions?false:false;
+  let body='';
+
+  if(S.tab==='menu'){
+    const cats=[...new Set(S.menu.map(m=>m.category))];
+    body = `${S.members.length<(S.rest?.max_party||6)?`<div class="card" style="background:var(--amberS);border-color:#E4D2A0">
+        <div style="font-size:12px;color:var(--amberI)">Friends joining? They scan the QR and enter this PIN.</div>
+        <div class="row" style="margin-top:9px"><span class="mono" style="font-size:19px;font-weight:700;letter-spacing:.22em;background:var(--emerald);color:var(--brass-soft);padding:8px 14px;border-radius:10px">${esc(S.pin)}</span></div></div>`:''}
+      ${cats.map(c=>`<div style="margin-bottom:16px">
+        <div class="h4">${esc(c)}</div>
+        ${S.menu.filter(m=>m.category===c).map(m=>{
+          const q=S.cart[m.id]||0, out=!m.is_available;
+          return `<div class="card" style="display:flex;gap:11px;${out?'opacity:.45':''}">
+            <div class="veg"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13.5px;font-weight:600">${esc(m.name)} ${m.is_special?'<span class="st s-placed">SPECIAL</span>':''} ${out?'<span class="st s-served">SOLD OUT</span>':''}</div>
+              <div class="mut" style="margin-top:3px">${esc(m.description)}</div>
+              <div class="mono" style="font-size:13px;margin-top:5px;color:var(--emerald)">₹${m.price}</div>
+            </div>
+            ${out?'':(q?`<div class="stp"><button onclick="QR.cart('${m.id}',-1)">−</button><span>${q}</span><button onclick="QR.cart('${m.id}',1)">+</button></div>`
+                     :`<button class="add" onclick="QR.cart('${m.id}',1)">ADD</button>`)}
+          </div>`}).join('')}
+      </div>`).join('')}`;
+  }
+  if(S.tab==='orders'){
+    body = S.orders.length? S.orders.map(o=>{
+      const its=S.items.filter(i=>i.order_id===o.id);
+      const idx=FLOW.indexOf(o.status);
+      return `<div class="card">
+        <div class="row" style="justify-content:space-between"><div><b style="font-family:var(--fd);color:var(--emerald)">Order #${o.id}</b><div class="mut mono">${ago(o.placed_at)}</div></div><span class="st s-${o.status}">${FLOW_L[o.status]}</span></div>
+        <div style="margin-top:9px">${its.map(i=>`<div class="row" style="justify-content:space-between;font-size:12.5px;padding:3px 0"><span>${i.qty} × ${esc(i.name_snapshot)} <span class="mut">· ${esc(i.added_by)}</span></span><span class="mono">₹${i.price_snapshot*i.qty}</span></div>`).join('')}</div>
+        ${o.status==='rejected'?`<div class="err" style="margin-top:9px">${esc(o.reject_reason||'Kitchen could not make this')}</div>`
+          :`<div class="trk">${FLOW.map((f,i)=>`<div class="tstep ${i<idx?'dn':i===idx?'now':''}"><div class="d"></div><div class="l">${FLOW_L[f]}</div></div>`).join('')}</div>`}
+      </div>`}).join('') : `<div class="empty"><b>Nothing ordered yet</b>Add something from the menu.</div>`;
+  }
+  if(S.tab==='help'){
+    body = `<div class="h4">Need anything?</div>
+      <div class="g2">${REQS.map(([t,l,e])=>{
+        const on=S.requests.some(r=>r.type===t&&r.status==='open');
+        return `<button class="hb ${on?'on':''}" onclick="QR.req('${t}','${l}')"><span style="font-size:21px">${e}</span>${l}${on?'<span style="font-size:9.5px;color:var(--amberI);font-weight:700">ON THE WAY</span>':''}</button>`}).join('')}</div>
+      ${S.requests.filter(r=>r.type!=='payment').length?`<div class="lab">Your requests</div>${S.requests.filter(r=>r.type!=='payment').map(r=>`<div class="card row" style="padding:11px 13px"><span style="font-size:12.5px">${esc(r.label)}</span><span class="st ${r.status==='open'?'s-placed':'s-ready'}" style="margin-left:auto">${r.status==='open'?'Coming':'Done'}</span></div>`).join('')}`:''}`;
+  }
+  if(S.tab==='bill'){
+    const perHead=Math.ceil(total/Math.max(1,S.members.length));
+    const paying = S.requests.some(r=>r.type==='payment'&&r.status==='open');
+    body = sub===0 ? `<div class="empty"><b>No bill yet</b>Your bill appears once you've ordered.</div>` : `
+      <div class="card">
+        <div class="h4">Table ${esc(S.tableLabel)} · running bill</div>
+        ${S.items.filter(i=>S.orders.filter(o=>o.status!=='rejected').map(o=>o.id).includes(i.order_id)).map(i=>`<div class="row" style="justify-content:space-between;font-size:12.5px;padding:3px 0"><span>${i.qty} × ${esc(i.name_snapshot)}</span><span class="mono">₹${i.price_snapshot*i.qty}</span></div>`).join('')}
+        <div class="row" style="justify-content:space-between;padding:4px 0;border-top:1px dashed var(--line);margin-top:7px"><span class="mut">Subtotal</span><span class="mono mut">₹${sub}</span></div>
+        <div class="row" style="justify-content:space-between;padding:4px 0"><span class="mut">GST ${S.rest?.gst_percent||5}%</span><span class="mono mut">₹${gst}</span></div>
+        <div class="row" style="justify-content:space-between;padding-top:8px;font-weight:700;font-size:15px;color:var(--emerald)"><span>To pay</span><span class="mono">₹${total}</span></div>
+      </div>
+      ${paying?`<div class="ok-box">⏳ Waiting for the counter to confirm your payment…</div>`:`
+        <div class="lab">Split</div>
+        <div class="g2" style="grid-template-columns:1fr 1fr">
+          ${[['together','Together'],['equally','Split equally']].map(([k,l])=>`<button class="hb ${S.splitMode===k?'on':''}" onclick="QR.f('splitMode','${k}')">${l}</button>`).join('')}
+        </div>
+        ${S.splitMode==='equally'?`<div class="mut" style="margin-top:8px">₹${perHead} each × ${S.members.length}</div>`:''}
+        <div class="lab">Payment</div>
+        ${S.rest?.allow_counter?`<button class="cta brass" ${S.busy?'disabled':''} onclick="QR.settle('counter')">Pay at counter — ₹${total}</button>`:''}
+        ${S.rest?.allow_upi?`<button class="cta" onclick="QR.settle('upi')">Pay by UPI — ₹${total}</button>`:''}`}`;
+  }
+
+  return `<div class="wrap"><div class="hd">
+      <div class="hd-row">
+        <div><h1>${esc(S.rest?.name||'')}</h1><div class="sub">Table ${esc(S.tableLabel)}</div></div>
+        <div class="chip"><b>${esc(S.pin)}</b><span>Table PIN</span></div>
+      </div>
+      <div class="avs">${S.members.map(m=>`<div class="av" title="${esc(m.name)}" style="background:${m.color}">${m.is_host?'♔':esc(m.name[0].toUpperCase())}</div>`).join('')}
+        <span style="font-size:11.5px;color:var(--mutedD);margin-left:14px;align-self:center">${esc(S.myName)}${S.isHost?' (you started it)':''}</span></div>
+      <div class="tabs">
+        ${[['menu','Menu',0],['orders','Orders',openO],['help','Help',openR],['bill','Bill',0]].map(([k,l,b])=>
+          `<button class="tab ${S.tab===k?'on':''}" onclick="QR.f('tab','${k}')">${l}${b?`<span class="b">${b}</span>`:''}</button>`).join('')}
+      </div></div>
+    <div class="body sn">${body}</div>
+    ${S.tab==='menu'&&cartN?`<button class="bar" onclick="QR.place()"><span>🧺 ${cartN} item${cartN>1?'s':''}</span><span class="mono">₹${cartT} →</span></button>`:''}
+  </div>`;
+}
+function vCode(){
+  return `<div class="wrap dark"><div class="hero">
+    <div class="mk">${LOGO(38,'#C9A550')}</div>
+    <h1 style="font-size:26px">Staff sign in</h1>
+    <p>Enter the 6-character code from your manager.</p>
+    <input id="sc" class="inp mono" style="margin-top:20px;text-align:center;letter-spacing:.3em;text-transform:uppercase" maxlength="6" placeholder="ABC123" value="${esc(S.code)}" oninput="QR.f('code',this.value.toUpperCase())" />
+    ${S.codeErr?`<div class="err">${esc(S.codeErr)}</div>`:''}
+    <button class="cta brass" ${S.code.length===6?'':'disabled'} onclick="QR.login()">Sign in</button>
+    <button onclick="QR.go('landing')" style="margin-top:14px;font-size:12px;color:var(--mutedD)">← Back</button>
+  </div></div>`;
+}
+function vStaff(){
+  const isK = S.role==='kitchen';
+  const tabs = isK? [['tickets','Tickets'],['menu','Availability']]
+                  : [['req','Requests'],['tickets','Orders'],['floor','Tables'],['menu','Availability']];
+  if(!tabs.some(t=>t[0]===S.tab)) S.tab=tabs[0][0];
+  let body='';
+
+  if(S.tab==='tickets'){
+    const cols=[['New',o=>o.status==='placed'],['Cooking',o=>['accepted','preparing'].includes(o.status)],['Ready',o=>o.status==='ready']];
+    body = cols.map(([name,f])=>{
+      const list=S.tickets.filter(f);
+      return `<div class="lab">${name} · ${list.length}</div>
+        ${list.length?list.map(o=>{
+          const its=S.items.filter(i=>i.order_id===o.id);
+          const late=mins(o.placed_at)>=12;
+          return `<div class="tk ${late?'late':''}">
+            <div class="row" style="justify-content:space-between"><b style="font-family:var(--fd)">${esc(o.sessions?.tables?.label||'')} · #${o.id}</b><span class="mono mut">${late?'⚠ ':''}${mins(o.placed_at)}m</span></div>
+            <div style="margin:8px 0;font-size:12.5px;line-height:1.7">${its.map(i=>`${i.qty} × ${esc(i.name_snapshot)} <span class="mut">· ${esc(i.added_by)}</span>`).join('<br>')}</div>
+            <div class="row">${
+              o.status==='placed'?`<button class="tbtn t-ok" onclick="QR.adv(${o.id},'accepted')">Accept</button><button class="tbtn t-no" onclick="QR.rej(${o.id})">Decline</button>`
+              :o.status==='accepted'?`<button class="tbtn t-nx" onclick="QR.adv(${o.id},'preparing')">Start cooking</button>`
+              :o.status==='preparing'?`<button class="tbtn t-nx" onclick="QR.adv(${o.id},'ready')">Mark ready</button>`
+              :`<button class="tbtn t-ok" onclick="QR.adv(${o.id},'served')">Mark served</button>`}</div>
+          </div>`}).join('') : `<div class="empty">Nothing here</div>`}`;
+    }).join('');
+  }
+  if(S.tab==='req'){
+    body = S.allReq.length? S.allReq.map(r=>`<div class="card row">
+        <div style="flex:1"><b style="font-size:13px">${esc(r.label)}</b><div class="mut mono">${esc(r.sessions?.tables?.label||r.table_label||'')} · ${ago(r.created_at)}</div>${r.detail?`<div class="mut">${esc(r.detail)}</div>`:''}</div>
+        ${r.type==='payment'?`<button class="add" onclick="QR.cash('${r.session_id}')">Confirm payment</button>`:`<button class="add" onclick="QR.done('${r.id}')">Done</button>`}
+      </div>`).join('') : `<div class="empty"><b>All caught up</b>Guest requests appear here instantly.</div>`;
+  }
+  if(S.tab==='floor'){
+    body = S.sessions.length? S.sessions.map(s=>{
+      const host=(s.session_members||[]).find(m=>m.is_host);
+      return `<div class="card"><div class="row" style="justify-content:space-between">
+        <b class="mono" style="font-size:15px">${esc(s.tables?.label||'')}</b>
+        <span class="st ${s.status==='billing'?'s-rejected':'s-ready'}">${s.status==='billing'?'Billing':'Occupied'}</span></div>
+        <div class="mut" style="margin-top:5px">${esc(host?.name||'')} ♔ + ${(s.session_members||[]).length-1} · PIN ${esc(s.pin)}</div></div>`}).join('')
+      : `<div class="empty"><b>All tables free</b>Sessions appear here when guests scan.</div>`;
+  }
+  if(S.tab==='menu'){
+    body = S.menu.map(m=>`<div class="card row">
+      <div class="veg"></div><div style="flex:1"><b style="font-size:13px">${esc(m.name)}</b><div class="mut mono">₹${m.price}</div></div>
+      <div class="sw ${m.is_available?'on':''}" onclick="QR.avail('${m.id}',${m.is_available})"></div></div>`).join('');
+  }
+
+  return `<div class="wrap"><div class="hd">
+      <div class="hd-row"><div><h1>${isK?'Kitchen':'Floor'}</h1><div class="sub">${esc(S.staff?.name||'')} · ${esc(S.role||'')}</div></div>
+      <button class="chip" onclick="QR.out()"><b>⎋</b><span>Sign out</span></button></div>
+      <div class="tabs">${tabs.map(([k,l])=>`<button class="tab ${S.tab===k?'on':''}" onclick="QR.f('tab','${k}')">${l}${k==='req'&&S.allReq.length?`<span class="b">${S.allReq.length}</span>`:''}${k==='tickets'&&S.tickets.filter(o=>o.status==='placed').length?`<span class="b">${S.tickets.filter(o=>o.status==='placed').length}</span>`:''}</button>`).join('')}</div>
+    </div><div class="body sn">${body}</div></div>`;
+}
+
+function render(){
+  const a=$('app');
+  const foc=document.activeElement?.id, ss=document.activeElement?.selectionStart;
+  a.innerHTML =
+    S.view==='setup'? vSetup() :
+    S.view==='landing'? vLanding() :
+    S.view==='register'? vRegister() :
+    S.view==='join'? vJoin() :
+    S.view==='guest'? vGuest() :
+    S.view==='code'? vCode() :
+    S.view==='staff'? vStaff() :
+    `<div class="wrap dark"><div class="hero"><div class="mk">${LOGO(42,'#C9A550')}</div><p>Loading…</p></div></div>`;
+  if(foc){ const e=$(foc); if(e){ e.focus(); try{ e.setSelectionRange(ss,ss); }catch{} } }
+}
+
+/* ───────── public handlers ───────── */
+window.QR = {
+  f(k,v){ S[k]=v; if(k==='tab'||k==='splitMode') render(); },
+  tog(k){ S[k]=!S[k]; render(); },
+  phone(el){ el.value=el.value.replace(/\D/g,'').slice(0,10); S.regPhone=el.value; render(); },
+  go(v){ S.view=v; S.err=''; S.codeErr=''; render(); },
+  pin(i,el){
+    const v=el.value.replace(/\D/g,'').slice(-1); el.value=v; S.pinIn[i]=v;
+    if(S.pinErr){ S.pinErr=false; document.querySelectorAll('.pins input').forEach(x=>x.style.borderColor='var(--line)'); }
+    el.style.borderColor = v?'var(--brass)':'var(--line)';
+    if(v&&i<3) $('p'+(i+1))?.focus();
+    const ok=S.pinIn.join('').length===4 && S.joinName.trim();
+    const b=document.querySelector('.cta'); if(b){ b.disabled=!ok; b.classList.toggle('brass',!!ok); }
+  },
+  start(){ startOrJoin(null); },
+  join(){ startOrJoin(S.pinIn.join('')); },
+  async helpReq(){
+    await sb.from('requests').insert({restaurant_id:S.rest.id,table_label:S.tableLabel,type:'joinhelp',
+      label:'Guest can\'t join — needs the table PIN', detail:'Table '+S.tableLabel});
+    toast('Staff are on the way'); },
+  cart(id,d){ const q=(S.cart[id]||0)+d; if(q<=0) delete S.cart[id]; else S.cart[id]=q; render(); },
+  place(){ placeOrder(); },
+  req(t,l){ sendReq(t,l); },
+  adv(id,to){ advance(id,to); },
+  rej(id){ const r=prompt('Why? (the guest will see this)','Item just sold out'); if(r) advance(id,'rejected',r); },
+  done(id){ resolveReq(id); },
+  cash(sid){ confirmCash(sid); },
+  avail(id,cur){ toggleAvail(id,cur); },
+  settle(m){ settle(m); },
+  login(){ staffLogin(); },
+  out(){ staffOut(); },
+  leave(){ leaveTable(); },
+  saveCfg(){
+    const u=$('cfgU').value.trim(), k=$('cfgK').value.trim();
+    if(!u||!k){ toast('Both fields are required'); return; }
+    localStorage.setItem('qrios_url',u); localStorage.setItem('qrios_key',k);
+    location.reload();
+  }
+};
+
+/* ───────── boot ───────── */
+(async function boot(){
+  if(!sb){ S.view='setup'; render(); return; }
+  try{
+    await loadRestaurant();
+    if(!S.rest){ S.view='setup'; render(); toast('Connected, but no restaurant found — run the seed SQL'); return; }
+    await loadMenu();
+
+    const saved = localStorage.getItem('qrios_staff');
+    if(saved && !S.qrToken){ S.staff=JSON.parse(saved); S.role=S.staff.role; S.view='staff'; await loadStaffData(); await subscribe(); render(); return; }
+
+    if(S.qrToken){
+      if(S.sessionId){
+        await loadSession();
+        if(S.sessionId){ S.view='guest'; await subscribe(); render(); return; }
+      }
+      // is there an open session at this table already?
+      const { data: t } = await sb.from('tables').select('id,label').eq('qr_token',S.qrToken).maybeSingle();
+      if(!t){ S.view='landing'; S.err='Table not recognised'; render(); return; }
+      S.tableLabel=t.label;
+      const { data: open } = await sb.from('sessions').select('id, session_members(name,is_host)')
+        .eq('table_id',t.id).neq('status','closed').maybeSingle();
+      if(open){ S.hostName=(open.session_members||[]).find(m=>m.is_host)?.name||''; S.view='join'; }
+      else S.view='register';
+      render(); await subscribe(); return;
+    }
+    S.view='landing'; render();
+  }catch(e){
+    console.error(e); S.view='setup'; render(); toast('Could not connect — check your keys');
+  }
+})();
+setInterval(()=>{ if(!document.activeElement || !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) render(); }, 30000);
+</script>
+</body>
+</html>
