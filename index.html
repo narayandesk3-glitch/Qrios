@@ -126,8 +126,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
    ⚠️  PASTE YOUR SUPABASE KEYS HERE  (Project Settings → API)
    The anon key is meant to be public — it's safe in client code.
    ══════════════════════════════════════════════════════════════ */
-const SUPABASE_URL = localStorage.getItem('qrios_url') || "";
-const SUPABASE_ANON = localStorage.getItem('qrios_key') || "";
+/* Baked in so guests never see a setup screen — they scan and order.
+   Publishable/anon keys are designed to live in client code; RLS protects the data.
+   To point at a different project, override once in the browser console:
+     localStorage.setItem('qrios_url','…'); localStorage.setItem('qrios_key','…'); location.reload();
+*/
+const SUPABASE_URL  = localStorage.getItem('qrios_url') || "https://efyepjchaeblxryrhznr.supabase.co";
+const SUPABASE_ANON = localStorage.getItem('qrios_key') || "sb_publishable_2ZJtscPWHxUkVvv1Msi5mg_5TQytTqg";
 
 const sb = (SUPABASE_URL && SUPABASE_ANON) ? createClient(SUPABASE_URL, SUPABASE_ANON) : null;
 
@@ -137,7 +142,14 @@ const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 const qs = new URLSearchParams(location.search);
 let toastT;
 function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2400); }
-function setConn(live){ const c=$('conn'); c.className='conn '+(live?'live':'off'); c.textContent = live?'● live':'○ offline'; }
+let lastSync=0, rtEvents=0;
+function setConn(live){
+  const c=$('conn'); if(!c) return;
+  c.className='conn '+(live?'live':'off');
+  const secs = lastSync? Math.round((Date.now()-lastSync)/1000) : null;
+  c.textContent = (live?'● live':'○ offline') + (rtEvents?` ⚡${rtEvents}`:'') + (secs!==null?` ${secs}s`:'');
+}
+setInterval(()=>setConn(document.querySelector('.conn.live')!==null), 1000);
 const mins = ts => Math.floor((Date.now()-new Date(ts))/60000);
 const ago  = ts => { const m=mins(ts); return m<1?'just now':m+'m ago'; };
 const LOGO = (s,c)=>`<svg viewBox="0 0 64 64" fill="none" style="width:${s}px;height:${s}px"><g stroke="${c}" stroke-width="${s<24?4.5:3.2}" stroke-linejoin="round" stroke-linecap="round"><path d="M10 4H21L27 10V21L21 27H10L4 21V10Z"/><path d="M37 4H48L54 10V21L48 27H37L31 21V10Z"/><path d="M10 31H21L27 37V48L21 54H10L4 48V37Z"/><path d="M37 31H48L54 37V48L61 62L44 54H37L31 48V37Z"/></g></svg>`;
@@ -218,10 +230,14 @@ async function subscribe(){
     .on('postgres_changes',{event:'*',schema:'public',table:'sessions'},    onChange)
     .on('postgres_changes',{event:'*',schema:'public',table:'session_members'},onChange)
     .on('postgres_changes',{event:'*',schema:'public',table:'menu_items'},  onChange)
-    .subscribe(st=> setConn(st==='SUBSCRIBED'));
+    .subscribe(st=>{
+      setConn(st==='SUBSCRIBED');
+      if(st==='CHANNEL_ERROR' || st==='TIMED_OUT'){ setTimeout(subscribe, 3000); }
+    });
 }
 let pending=false;
 async function onChange(payload){
+  rtEvents++;                       // proves realtime is actually delivering
   if(pending) return; pending=true;
   setTimeout(async ()=>{
     pending=false;
@@ -454,7 +470,8 @@ function vGuest(){
         <div class="row" style="justify-content:space-between;padding:4px 0"><span class="mut">GST ${S.rest?.gst_percent||5}%</span><span class="mono mut">₹${gst}</span></div>
         <div class="row" style="justify-content:space-between;padding-top:8px;font-weight:700;font-size:15px;color:var(--emerald)"><span>To pay</span><span class="mono">₹${total}</span></div>
       </div>
-      ${paying?`<div class="ok-box">⏳ Waiting for the counter to confirm your payment…</div>`:`
+      ${paying?`<div class="ok-box">⏳ Waiting for the counter to confirm your payment…</div>
+        <button class="cta" style="background:transparent;border:1.5px solid var(--line);color:var(--muted)" onclick="QR.leave()">Leave this table</button>`:`
         <div class="lab">Split</div>
         <div class="g2" style="grid-template-columns:1fr 1fr">
           ${[['together','Together'],['equally','Split equally']].map(([k,l])=>`<button class="hb ${S.splitMode===k?'on':''}" onclick="QR.f('splitMode','${k}')">${l}</button>`).join('')}
@@ -485,7 +502,7 @@ function vCode(){
     <div class="mk">${LOGO(38,'#C9A550')}</div>
     <h1 style="font-size:26px">Staff sign in</h1>
     <p>Enter the 6-character code from your manager.</p>
-    <input id="sc" class="inp mono" style="margin-top:20px;text-align:center;letter-spacing:.3em;text-transform:uppercase" maxlength="6" placeholder="ABC123" value="${esc(S.code)}" oninput="QR.f('code',this.value.toUpperCase())" />
+    <input id="sc" autofocus class="inp mono" style="margin-top:20px;text-align:center;letter-spacing:.3em;text-transform:uppercase" maxlength="6" placeholder="ABC123" value="${esc(S.code)}" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6); QR.f('code',this.value)" />
     ${S.codeErr?`<div class="err">${esc(S.codeErr)}</div>`:''}
     <button class="cta brass" ${S.code.length===6?'':'disabled'} onclick="QR.login()">Sign in</button>
     <button onclick="QR.go('landing')" style="margin-top:14px;font-size:12px;color:var(--mutedD)">← Back</button>
@@ -516,6 +533,7 @@ function vStaff(){
               :`<button class="tbtn t-ok" onclick="QR.adv(${o.id},'served')">Mark served</button>`}</div>
           </div>`}).join('') : `<div class="empty">Nothing here</div>`}`;
     }).join('');
+    if(!S.tickets.length) body = `<div class="empty"><b>No open tickets</b>New orders appear here the moment a guest sends them — no refresh needed.</div>`;
   }
   if(S.tab==='req'){
     body = S.allReq.length? S.allReq.map(r=>`<div class="card row">
@@ -540,7 +558,10 @@ function vStaff(){
 
   return `<div class="wrap"><div class="hd">
       <div class="hd-row"><div><h1>${isK?'Kitchen':'Floor'}</h1><div class="sub">${esc(S.staff?.name||'')} · ${esc(S.role||'')}</div></div>
-      <button class="chip" onclick="QR.out()"><b>⎋</b><span>Sign out</span></button></div>
+      <div style="display:flex;gap:8px">
+        <button class="chip" onclick="QR.reload()"><b>↻</b><span>Refresh</span></button>
+        <button class="chip" onclick="QR.out()"><b>⎋</b><span>Sign out</span></button>
+      </div></div>
       <div class="tabs">${tabs.map(([k,l])=>`<button class="tab ${S.tab===k?'on':''}" onclick="QR.f('tab','${k}')">${l}${k==='req'&&S.allReq.length?`<span class="b">${S.allReq.length}</span>`:''}${k==='tickets'&&S.tickets.filter(o=>o.status==='placed').length?`<span class="b">${S.tickets.filter(o=>o.status==='placed').length}</span>`:''}</button>`).join('')}</div>
     </div><div class="body sn">${body}</div></div>`;
 }
@@ -560,19 +581,44 @@ function render(){
   if(foc){ const e=$(foc); if(e){ e.focus(); try{ e.setSelectionRange(ss,ss); }catch{} } }
 }
 
+/* keeps the primary button in step with what's typed, WITHOUT re-rendering
+   (a re-render would destroy the field you're typing in) */
+function syncCta(){
+  const b=document.querySelector('.cta'); if(!b) return;
+  let ok=false, label=null;
+  if(S.view==='code'){
+    ok = S.code.trim().length===6;
+    label = ok?'Sign in':'Enter all 6 characters';
+  } else if(S.view==='register'){
+    ok = !!S.regName.trim() && S.regPhone.length===10 && S.agree;
+    label = S.busy?'Starting…':(ok?'Start table':'Fill everything above');
+  } else if(S.view==='join'){
+    const filled = S.pinIn.join('').length===4;
+    ok = filled && !!S.joinName.trim();
+    label = S.busy?'Joining…':(ok?'Join table':(filled?'Add your name':'Enter the PIN'));
+  } else return;
+  b.disabled = !ok || S.busy;
+  b.classList.toggle('brass', !!ok);
+  if(label) b.textContent = label;
+}
+
 /* ───────── public handlers ───────── */
 window.QR = {
-  f(k,v){ S[k]=v; if(k==='tab'||k==='splitMode') render(); },
-  tog(k){ S[k]=!S[k]; render(); },
-  phone(el){ el.value=el.value.replace(/\D/g,'').slice(0,10); S.regPhone=el.value; render(); },
+  f(k,v){
+    S[k]=v;
+    if(k==='tab'){ render(); refreshNow(); }
+    else if(k==='splitMode'){ render(); }
+    else syncCta();
+  },
+  tog(k){ S[k]=!S[k]; render(); syncCta(); },
+  phone(el){ el.value=el.value.replace(/\D/g,'').slice(0,10); S.regPhone=el.value; syncCta(); },
   go(v){ S.view=v; S.err=''; S.codeErr=''; render(); },
   pin(i,el){
     const v=el.value.replace(/\D/g,'').slice(-1); el.value=v; S.pinIn[i]=v;
     if(S.pinErr){ S.pinErr=false; document.querySelectorAll('.pins input').forEach(x=>x.style.borderColor='var(--line)'); }
     el.style.borderColor = v?'var(--brass)':'var(--line)';
     if(v&&i<3) $('p'+(i+1))?.focus();
-    const ok=S.pinIn.join('').length===4 && S.joinName.trim();
-    const b=document.querySelector('.cta'); if(b){ b.disabled=!ok; b.classList.toggle('brass',!!ok); }
+    syncCta();
   },
   start(){ startOrJoin(null); },
   join(){ startOrJoin(S.pinIn.join('')); },
@@ -591,6 +637,7 @@ window.QR = {
   settle(m){ settle(m); },
   login(){ staffLogin(); },
   out(){ staffOut(); },
+  async reload(){ if(S.role){ await loadStaffData(); } else { await loadSession(); } await loadMenu(); render(); toast('Refreshed'); },
   leave(){ leaveTable(); },
   saveCfg(){
     const u=$('cfgU').value.trim(), k=$('cfgK').value.trim();
@@ -631,7 +678,35 @@ window.QR = {
     console.error(e); S.view='setup'; render(); toast('Could not connect — check your keys');
   }
 })();
-setInterval(()=>{ if(!document.activeElement || !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) render(); }, 30000);
+/* ── keeping screens fresh ──
+   Realtime is the primary path. These are safety nets for restaurant wifi:
+   a light poll while the screen is visible, and an immediate refresh when
+   someone returns to the tab (very common on a guest's phone).            */
+let polling=false;
+async function refreshNow(){
+  if(polling) return; polling=true;
+  try{
+    if(S.role) await loadStaffData(); else if(S.sessionId) await loadSession();
+    await loadMenu();
+    lastSync = Date.now();
+    if(S.view==='guest'||S.view==='staff') render();
+  }catch(e){ /* offline — try again next tick */ }
+  finally{ polling=false; }
+}
+function typing(){
+  const a=document.activeElement;
+  return !!(a && ['INPUT','TEXTAREA'].includes(a.tagName));
+}
+setInterval(()=>{
+  if(document.hidden || typing()) return;
+  if(S.view==='guest' || S.view==='staff') refreshNow();
+}, 4000);
+
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden && (S.view==='guest'||S.view==='staff')){ refreshNow(); subscribe(); }
+});
+window.addEventListener('online', ()=>{ setConn(false); refreshNow(); subscribe(); });
+window.addEventListener('offline', ()=> setConn(false));
 </script>
 </body>
 </html>
