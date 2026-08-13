@@ -324,8 +324,16 @@ async function resolveReq(id){
   await loadStaffData(); render(); toast('Done');
 }
 async function settle(method){
-  S.busy=true; render();
+  S.busy=true;
+  const breakdown = splitSummary();
+  render();
   await sb.rpc('settle_session',{p_session_id:S.sessionId,p_method:method,p_split:S.splitMode});
+  if(method==='counter' && breakdown){
+    // attach the split so the cashier knows exactly what to collect from whom
+    await sb.from('requests')
+      .update({ detail:'Split: '+breakdown })
+      .eq('session_id',S.sessionId).eq('type','payment').eq('status','open');
+  }
   S.busy=false;
   await loadSession(); render();
   toast(method==='upi'?'Payment received':'Counter notified');
@@ -356,6 +364,29 @@ function bill(){
   const sub = S.items.filter(i=>live.includes(i.order_id)).reduce((s,i)=>s+i.price_snapshot*i.qty,0);
   const gst = Math.round(sub*(S.rest?.gst_percent||5)/100);
   return {sub,gst,total:sub+gst};
+}
+
+function splitByItem(){
+  const live = S.orders.filter(o=>o.status!=='rejected').map(o=>o.id);
+  const rows = S.items.filter(i=>live.includes(i.order_id));
+  const {sub,total} = bill();
+  const map = {};
+  S.members.forEach(m=>map[m.name]=0);
+  rows.forEach(i=>{ map[i.added_by] = (map[i.added_by]||0) + i.price_snapshot*i.qty; });
+  return Object.entries(map).map(([name,amt])=>({
+    name,
+    color:(S.members.find(m=>m.name===name)||{}).color||'#C9A550',
+    items: rows.filter(i=>i.added_by===name).reduce((n,i)=>n+i.qty,0),
+    amt: sub ? Math.round(amt/sub*total) : 0
+  })).filter(p=>p.items>0 || S.members.some(m=>m.name===p.name));
+}
+function splitSummary(){
+  if(S.splitMode==='equally'){
+    const {total}=bill(); const per=Math.ceil(total/Math.max(1,S.members.length));
+    return S.members.map(m=>m.name+' ₹'+per).join(' · ');
+  }
+  if(S.splitMode==='byitem') return splitByItem().map(p=>p.name+' ₹'+p.amt).join(' · ');
+  return '';
 }
 
 /* ───────── views ───────── */
@@ -491,10 +522,29 @@ function vGuest(){
       ${paying?`<div class="ok-box">⏳ Waiting for the counter to confirm your payment…</div>
         <button class="cta" style="background:transparent;border:1.5px solid var(--line);color:var(--muted)" onclick="QR.leave()">Leave this table</button>`:`
         <div class="lab">Split</div>
-        <div class="g2" style="grid-template-columns:1fr 1fr">
-          ${[['together','Together'],['equally','Split equally']].map(([k,l])=>`<button class="hb ${S.splitMode===k?'on':''}" onclick="QR.f('splitMode','${k}')">${l}</button>`).join('')}
+        <div class="g2" style="grid-template-columns:1fr 1fr 1fr">
+          ${[['together','Together'],['equally','Equally'],['byitem','By item']].map(([k,l])=>`<button class="hb ${S.splitMode===k?'on':''}" style="padding:12px 4px;font-size:11px" onclick="QR.f('splitMode','${k}')">${l}</button>`).join('')}
         </div>
-        ${S.splitMode==='equally'?`<div class="mut" style="margin-top:8px">₹${perHead} each × ${S.members.length}</div>`:''}
+        ${S.splitMode==='equally'?`
+          <div style="margin-top:10px">
+            ${S.members.map(m=>`<div class="card row" style="padding:10px 13px;margin-bottom:7px">
+              <span style="width:10px;height:10px;border-radius:50%;background:${m.color}"></span>
+              <span style="font-size:12.5px">${esc(m.name)}</span>
+              <span class="mono" style="margin-left:auto;font-weight:600;color:var(--emerald)">₹${perHead}</span>
+            </div>`).join('')}
+          </div>`:''}
+        ${S.splitMode==='byitem'?`
+          <div style="margin-top:10px">
+            ${splitByItem().map(p=>`<div class="card row" style="padding:10px 13px;margin-bottom:7px">
+              <span style="width:10px;height:10px;border-radius:50%;background:${p.color}"></span>
+              <div style="flex:1">
+                <div style="font-size:12.5px">${esc(p.name)}</div>
+                <div class="mut" style="font-size:11px">${p.items} item${p.items===1?'':'s'}</div>
+              </div>
+              <span class="mono" style="font-weight:600;color:var(--emerald)">₹${p.amt}</span>
+            </div>`).join('')}
+            <div class="mut" style="font-size:11px;margin-top:2px">Each person pays for what they added · GST shared proportionally</div>
+          </div>`:''}
         <div class="lab">Payment</div>
         ${S.rest?.allow_counter?`<button class="cta brass" ${S.busy?'disabled':''} onclick="QR.settle('counter')">Pay at counter — ₹${total}</button>`:''}
         ${S.rest?.allow_upi?`<button class="cta" onclick="QR.settle('upi')">Pay by UPI — ₹${total}</button>`:''}`}`;
