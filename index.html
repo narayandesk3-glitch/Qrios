@@ -104,6 +104,21 @@ body{font-family:var(--fb);background:var(--emerald-deep);color:var(--cream);min
 .conn{position:fixed;top:8px;right:8px;z-index:210;font-size:9.5px;font-family:var(--fm);padding:4px 9px;border-radius:8px;letter-spacing:.08em}
 .conn.live{background:rgba(46,125,83,.9);color:#fff}
 .conn.off{background:rgba(181,72,47,.95);color:#fff}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px}
+.kpi .v{font-family:var(--fd);font-size:21px;font-weight:600;color:var(--emerald)}
+.kpi .l{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.brow{margin-bottom:9px}
+.brow .t{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.btrack{height:7px;background:#EFE9DA;border-radius:99px;overflow:hidden}
+.bfill{height:100%;background:linear-gradient(90deg,var(--brass),var(--brass-soft));border-radius:99px}
+.bfill.g{background:linear-gradient(90deg,var(--emerald-soft),var(--green))}
+.vbars{display:flex;align-items:flex-end;gap:5px;height:88px;margin-top:8px}
+.vb{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.vb .bar2{width:100%;background:linear-gradient(180deg,var(--brass-soft),var(--brass));border-radius:5px 5px 2px 2px;min-height:3px}
+.vb .bar2.now{background:linear-gradient(180deg,#3E7A5E,var(--emerald))}
+.vb .lbl{font-size:8.5px;color:var(--muted);font-family:var(--fm)}
+.pill2{display:flex;justify-content:space-between;padding:9px 12px;border-radius:10px;background:#F5EFE1;margin-bottom:7px;font-size:12.5px}
 .hero{padding:34px 22px;text-align:center}
 .hero .mk{width:72px;height:72px;border-radius:20px;margin:0 auto 18px;background:linear-gradient(150deg,#153A2D,#0C271E);display:grid;place-items:center;box-shadow:0 10px 30px rgba(201,165,80,.24),inset 0 0 0 2px rgba(201,165,80,.5)}
 .hero h1{font-family:var(--fd);font-size:34px;letter-spacing:.16em}
@@ -205,11 +220,17 @@ async function loadSession(){
   const { data: rq } = await sb.from('requests').select('*').eq('session_id',S.sessionId).order('created_at',{ascending:false});
   S.requests = rq||[];
 }
+let STATS=null;
+async function loadStats(){
+  try{ const { data } = await sb.rpc('owner_stats',{p_days:7}); STATS=data; }
+  catch(e){ console.error('stats',e); }
+}
 async function loadStaffData(){
   const { data: ords } = await sb.from('orders').select('*, sessions(id, tables(label))')
     .eq('restaurant_id',S.rest.id).in('status',['placed','accepted','preparing','ready'])
     .order('placed_at');
   S.tickets = ords||[];
+  if(S.role==='owner'||S.role==='manager') await loadStats();
   const ids = S.tickets.map(o=>o.id);
   S.items = ids.length ? (await sb.from('order_items').select('*').in('order_id',ids)).data||[] : [];
   const { data: rq } = await sb.from('requests').select('*, sessions(tables(label))')
@@ -588,8 +609,10 @@ function vCode(){
 }
 function vStaff(){
   const isK = S.role==='kitchen';
+  const boss = S.role==='owner' || S.role==='manager';
   const tabs = isK? [['tickets','Tickets'],['menu','Availability']]
-                  : [['req','Requests'],['tickets','Orders'],['floor','Tables'],['menu','Availability']];
+                  : boss? [['dash','Dashboard'],['req','Requests'],['tickets','Orders'],['floor','Tables'],['menu','Availability']]
+                        : [['req','Requests'],['tickets','Orders'],['floor','Tables'],['menu','Availability']];
   if(!tabs.some(t=>t[0]===S.tab)) S.tab=tabs[0][0];
   let body='';
 
@@ -627,6 +650,83 @@ function vStaff(){
         <span class="st ${s.status==='billing'?'s-rejected':'s-ready'}">${s.status==='billing'?'Billing':'Occupied'}</span></div>
         <div class="mut" style="margin-top:5px">${esc(host?.name||'')} ♔ + ${(s.session_members||[]).length-1} · PIN ${esc(s.pin)}</div></div>`}).join('')
       : `<div class="empty"><b>All tables free</b>Sessions appear here when guests scan.</div>`;
+  }
+  if(S.tab==='dash'){
+    const d=STATS;
+    if(!d) body = `<div class="empty"><b>Loading numbers…</b>Pulling today's figures.</div>`;
+    else{
+      const t=d.today||{}, k=d.kitchen||{}, sv=d.service||{}, lv=d.live||{};
+      const top=d.top_items||[], cat=d.by_category||[], hrs=d.by_hour||[], tr=d.trend||[], slow=d.slow_items||[];
+      const pm=d.pay_mix||{}, rt=d.req_types||{};
+      const maxQ=Math.max(1,...top.map(x=>x.qty));
+      const maxC=Math.max(1,...cat.map(x=>x.revenue));
+      const maxH=Math.max(1,...hrs.map(x=>x.revenue));
+      const maxT=Math.max(1,...tr.map(x=>x.revenue));
+      const payTot=Math.max(1,(pm.counter||0)+(pm.upi||0));
+      const rq=[['water','Water'],['cutlery','Cutlery'],['cleaning','Cleaning'],['other','Captain']];
+      const rqTot=Math.max(1,rq.reduce((a,[x])=>a+(rt[x]||0),0));
+      body = `
+      <div class="kpis">
+        <div class="kpi"><div class="v">₹${(t.revenue||0).toLocaleString('en-IN')}</div><div class="l">Revenue today</div></div>
+        <div class="kpi"><div class="v">${t.bills||0}</div><div class="l">Bills settled</div></div>
+        <div class="kpi"><div class="v">₹${t.avg||0}</div><div class="l">Average bill</div></div>
+        <div class="kpi"><div class="v">${d.covers||0}</div><div class="l">Covers seated</div></div>
+        <div class="kpi"><div class="v">₹${(t.gst||0).toLocaleString('en-IN')}</div><div class="l">GST collected</div></div>
+        <div class="kpi"><div class="v">${k.prep_min||0}m</div><div class="l">Avg prep time</div></div>
+      </div>
+
+      <div class="card"><div class="h4">Live right now</div>
+        <div class="pill2"><span>Open tickets</span><b class="mono">${lv.open_tickets||0}</b></div>
+        <div class="pill2"><span>Open guest requests</span><b class="mono">${lv.open_requests||0}</b></div>
+        <div class="pill2"><span>Tables occupied</span><b class="mono">${lv.open_tables||0}</b></div>
+        <div class="pill2"><span>Guests seated</span><b class="mono">${lv.seated||0}</b></div>
+      </div>
+
+      ${hrs.length?`<div class="card"><div class="h4">Revenue by hour</div>
+        <div class="vbars">${hrs.map(h=>`<div class="vb">
+          <div class="bar2 ${h.revenue===maxH?'now':''}" style="height:${Math.round(h.revenue/maxH*100)}%"></div>
+          <div class="lbl">${h.hour}h</div></div>`).join('')}</div></div>`:''}
+
+      ${top.length?`<div class="card"><div class="h4">Best sellers today</div>
+        ${top.map(x=>`<div class="brow"><div class="t"><span>${esc(x.name)}</span><span class="mono mut">${x.qty} · ₹${x.revenue}</span></div>
+          <div class="btrack"><div class="bfill" style="width:${Math.round(x.qty/maxQ*100)}%"></div></div></div>`).join('')}</div>`
+       :`<div class="card"><div class="h4">Best sellers today</div><div class="mut">No orders yet today.</div></div>`}
+
+      ${cat.length?`<div class="card"><div class="h4">Revenue by category</div>
+        ${cat.map(x=>`<div class="brow"><div class="t"><span>${esc(x.category)}</span><span class="mono mut">₹${x.revenue}</span></div>
+          <div class="btrack"><div class="bfill g" style="width:${Math.round(x.revenue/maxC*100)}%"></div></div></div>`).join('')}</div>`:''}
+
+      <div class="card"><div class="h4">Kitchen health</div>
+        <div class="pill2"><span>Avg time to accept</span><b class="mono">${k.accept_min||0} min</b></div>
+        <div class="pill2"><span>Avg prep (accept → ready)</span><b class="mono">${k.prep_min||0} min</b></div>
+        <div class="pill2"><span>Served late (over 12 min)</span><b class="mono" style="color:${k.late?'var(--red)':'var(--emerald)'}">${k.late||0}</b></div>
+        <div class="pill2"><span>Orders declined</span><b class="mono" style="color:${k.declined?'var(--red)':'var(--emerald)'}">${k.declined||0}</b></div>
+      </div>
+
+      <div class="card"><div class="h4">Service pulse</div>
+        ${rq.map(([key,label])=>`<div class="brow"><div class="t"><span>${label}</span><span class="mono mut">${rt[key]||0}</span></div>
+          <div class="btrack"><div class="bfill" style="width:${Math.round((rt[key]||0)/rqTot*100)}%"></div></div></div>`).join('')}
+        <div class="pill2" style="margin-top:9px"><span>Avg response time</span><b class="mono">${sv.avg_min||0} min</b></div>
+      </div>
+
+      <div class="card"><div class="h4">Payment mix</div>
+        <div class="brow"><div class="t"><span>Counter (cash/card)</span><span class="mono mut">${pm.counter||0} bills</span></div>
+          <div class="btrack"><div class="bfill" style="width:${Math.round((pm.counter||0)/payTot*100)}%"></div></div></div>
+        <div class="brow"><div class="t"><span>UPI</span><span class="mono mut">${pm.upi||0} bills</span></div>
+          <div class="btrack"><div class="bfill g" style="width:${Math.round((pm.upi||0)/payTot*100)}%"></div></div></div>
+      </div>
+
+      ${tr.length?`<div class="card"><div class="h4">Last 7 days</div>
+        <div class="vbars">${tr.map((x,i)=>`<div class="vb">
+          <div class="bar2 ${i===tr.length-1?'now':''}" style="height:${Math.round(x.revenue/maxT*100)}%"></div>
+          <div class="lbl">${x.day.split(' ')[0]}</div></div>`).join('')}</div>
+        <div class="mut" style="margin-top:6px;font-size:11px">Today highlighted</div></div>`:''}
+
+      ${slow.length?`<div class="card"><div class="h4">No sales today</div>
+        ${slow.map(x=>`<div class="pill2"><span>${esc(x.name)}</span><b class="mono mut">₹${x.price}</b></div>`).join('')}
+        <div class="mut" style="font-size:11px">Push these, or take them off the menu.</div></div>`:''}
+      `;
+    }
   }
   if(S.tab==='menu'){
     body = S.menu.map(m=>`<div class="card row">
