@@ -169,6 +169,7 @@ const mins = ts => Math.floor((Date.now()-new Date(ts))/60000);
 const ago  = ts => { const m=mins(ts); return m<1?'just now':m+'m ago'; };
 const LOGO = (s,c)=>`<svg viewBox="0 0 64 64" fill="none" style="width:${s}px;height:${s}px"><g stroke="${c}" stroke-width="${s<24?4.5:3.2}" stroke-linejoin="round" stroke-linecap="round"><path d="M10 4H21L27 10V21L21 27H10L4 21V10Z"/><path d="M37 4H48L54 10V21L48 27H37L31 21V10Z"/><path d="M10 31H21L27 37V48L21 54H10L4 48V37Z"/><path d="M37 31H48L54 37V48L61 62L44 54H37L31 48V37Z"/></g></svg>`;
 
+const MENU_CATS = ["Today's Special",'Tiffins','Meals','Beverages','Sweets'];
 const FLOW = ['placed','accepted','preparing','ready','served'];
 const FLOW_L = {placed:'Placed',accepted:'Accepted',preparing:'Cooking',ready:'Ready',served:'Served',rejected:'Declined'};
 const REQS = [['water','Water','🥛'],['cutlery','Cutlery','🍴'],['cleaning','Clean table','🧹'],['other','Call captain','🛎']];
@@ -186,7 +187,7 @@ const S = {
   regName:'', regPhone:'', agree:false,
   joinName:'', pinIn:['','','',''], pinErr:false, attempts:0, showHelp:false, joinMsg:'',
   staff:null, tickets:[], allReq:[], sessions:[],
-  code:'', codeErr:'',
+  code:'', codeErr:'', mf:null,
   splitMode:'together', payMethod:null,
   busy:false,
 };
@@ -365,6 +366,33 @@ async function confirmCash(sessionId){
 }
 async function toggleAvail(id,cur){
   await sb.from('menu_items').update({is_available:!cur}).eq('id',id);
+  await loadMenu(); render();
+}
+async function saveDish(){
+  const f=S.mf;
+  if(!f.name.trim()){ toast('Give the dish a name'); return; }
+  const price=parseInt(f.price,10);
+  if(isNaN(price)||price<5){ toast('Price must be at least ₹5'); return; }
+  const row={
+    restaurant_id:S.rest.id, category:f.category, name:f.name.trim(),
+    description:f.description.trim(), price, is_special:f.is_special
+  };
+  if(f.id){ await sb.from('menu_items').update(row).eq('id',f.id); toast('Dish updated'); }
+  else    { await sb.from('menu_items').insert(row);                toast('Dish added — live on every phone'); }
+  S.mf=null; await loadMenu(); render();
+}
+async function deleteDish(id,name){
+  if(!confirm('Remove "'+name+'" from the menu?')) return;
+  await sb.from('menu_items').delete().eq('id',id);
+  S.mf=null; await loadMenu(); render(); toast(name+' removed');
+}
+async function nudgePrice(id,cur,delta){
+  const np=Math.max(5,cur+delta);
+  await sb.from('menu_items').update({price:np}).eq('id',id);
+  await loadMenu(); render();
+}
+async function toggleSpecial(id,cur){
+  await sb.from('menu_items').update({is_special:!cur}).eq('id',id);
   await loadMenu(); render();
 }
 async function staffLogin(){
@@ -729,9 +757,69 @@ function vStaff(){
     }
   }
   if(S.tab==='menu'){
-    body = S.menu.map(m=>`<div class="card row">
-      <div class="veg"></div><div style="flex:1"><b style="font-size:13px">${esc(m.name)}</b><div class="mut mono">₹${m.price}</div></div>
-      <div class="sw ${m.is_available?'on':''}" onclick="QR.avail('${m.id}',${m.is_available})"></div></div>`).join('');
+    const boss2 = S.role==='owner' || S.role==='manager';
+    const f = S.mf;
+    const form = (boss2 && f) ? [
+      '<div class="card" style="border-color:var(--brass)">',
+        '<div class="h4">' + (f.id?'Edit dish':'Add a dish') + '</div>',
+        '<div class="lab">Name</div>',
+        '<input id="mfName" class="inp" placeholder="e.g. Set Dose (3 pcs)" value="'+esc(f.name)+'" oninput="QR.mf(\'name\',this.value)" />',
+        '<div class="lab">Description</div>',
+        '<input id="mfDesc" class="inp" placeholder="Short line guests will read" value="'+esc(f.description)+'" oninput="QR.mf(\'description\',this.value)" />',
+        '<div class="lab">Price (₹)</div>',
+        '<input id="mfPrice" class="inp mono" type="tel" inputmode="numeric" value="'+esc(f.price)+'" oninput="QR.mfPrice(this)" />',
+        '<div class="lab">Category</div>',
+        '<div style="display:flex;flex-wrap:wrap;gap:7px">',
+          MENU_CATS.map(function(c,i){
+            var on = (f.category===c) ? 'border-color:var(--brass);background:var(--amberS)' : '';
+            return '<button class="hb" style="padding:8px 12px;font-size:11.5px;'+on+'" onclick="QR.mfCat('+i+')">'+esc(c)+'</button>';
+          }).join(''),
+        '</div>',
+        '<div class="row" style="margin-top:14px;justify-content:space-between">',
+          '<span style="font-size:12.5px">Mark as Today\'s Special</span>',
+          '<div class="sw '+(f.is_special?'on':'')+'" onclick="QR.mfSpecial()"></div>',
+        '</div>',
+        '<button class="cta brass" onclick="QR.saveDish()">'+(f.id?'Save changes':'Add to menu')+'</button>',
+        '<div class="row" style="gap:9px;margin-top:9px">',
+          '<button class="cta" style="margin-top:0;background:transparent;border:1.5px solid var(--line);color:var(--muted)" onclick="QR.mfClose()">Cancel</button>',
+          (f.id ? '<button class="cta" style="margin-top:0;background:var(--redS);color:var(--red)" onclick="QR.delDish()">Delete</button>' : ''),
+        '</div>',
+      '</div>'
+    ].join('') : '';
+
+    const addBtn = (boss2 && !f)
+      ? '<button class="cta brass" style="margin-top:0;margin-bottom:14px" onclick="QR.mfNew()">+ Add a dish</button>'
+      : '';
+
+    const cats2 = [...new Set(S.menu.map(m=>m.category))];
+    const list = cats2.map(function(c){
+      const rows = S.menu.filter(m=>m.category===c).map(function(m){
+        const ctrls = boss2 ? [
+          '<button class="tbtn" style="flex:0 0 34px;background:#EFE9DA" onclick="QR.price(\''+m.id+'\','+m.price+',-5)">-</button>',
+          '<span class="mono" style="min-width:52px;text-align:center;font-weight:600;color:var(--emerald)">₹'+m.price+'</span>',
+          '<button class="tbtn" style="flex:0 0 34px;background:#EFE9DA" onclick="QR.price(\''+m.id+'\','+m.price+',5)">+</button>',
+          '<button class="tbtn" style="background:#EFE9DA" onclick="QR.special(\''+m.id+'\','+m.is_special+')">'+(m.is_special?'* Special':'Special')+'</button>',
+          '<button class="tbtn t-nx" onclick="QR.mfEdit(\''+m.id+'\')">Edit</button>'
+        ].join('') : '<span class="mono mut">₹'+m.price+'</span>';
+        return [
+          '<div class="card" style="padding:12px 13px">',
+            '<div class="row">',
+              '<div class="veg"></div>',
+              '<div style="flex:1;min-width:0">',
+                '<b style="font-size:13px">'+esc(m.name)+'</b>',
+                (m.is_special?' <span class="st s-placed">SPECIAL</span>':''),
+                (m.description?'<div class="mut" style="font-size:11px;margin-top:2px">'+esc(m.description)+'</div>':''),
+              '</div>',
+              '<div class="sw '+(m.is_available?'on':'')+'" onclick="QR.avail(\''+m.id+'\','+m.is_available+')" title="Available / sold out"></div>',
+            '</div>',
+            '<div class="row" style="margin-top:9px;gap:7px">'+ctrls+'</div>',
+          '</div>'
+        ].join('');
+      }).join('');
+      return '<div class="lab">'+esc(c)+'</div>'+rows;
+    }).join('');
+
+    body = addBtn + form + list;
   }
 
   return `<div class="wrap"><div class="hd">
@@ -813,6 +901,18 @@ window.QR = {
   done(id){ resolveReq(id); },
   cash(sid){ confirmCash(sid); },
   avail(id,cur){ toggleAvail(id,cur); },
+  mf(k,v){ if(S.mf) S.mf[k]=v; },
+  mfPrice(el){ el.value=el.value.replace(/\D/g,'').slice(0,4); if(S.mf) S.mf.price=el.value; },
+  mfCat(i){ if(S.mf){ S.mf.category=MENU_CATS[i]; render(); } },
+  mfSpecial(){ if(S.mf){ S.mf.is_special=!S.mf.is_special; render(); } },
+  mfNew(){ S.mf={id:null,name:'',description:'',price:'80',category:'Tiffins',is_special:false}; render(); },
+  mfEdit(id){ const m=S.menu.find(x=>x.id===id); if(!m) return;
+    S.mf={id:m.id,name:m.name,description:m.description||'',price:String(m.price),category:m.category,is_special:m.is_special}; render(); },
+  mfClose(){ S.mf=null; render(); },
+  saveDish(){ saveDish(); },
+  delDish(){ if(S.mf&&S.mf.id) deleteDish(S.mf.id,S.mf.name); },
+  price(id,cur,d){ nudgePrice(id,cur,d); },
+  special(id,cur){ toggleSpecial(id,cur); },
   settle(m){ settle(m); },
   login(){ staffLogin(); },
   out(){ staffOut(); },
